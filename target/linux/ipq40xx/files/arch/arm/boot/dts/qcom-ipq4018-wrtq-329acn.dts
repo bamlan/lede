@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-2.0-or-later OR MIT
-// Copyright (c) 2018, Robert Marko <robimarko@gmail.com>
 
 #include "qcom-ipq4019.dtsi"
 #include <dt-bindings/gpio/gpio.h>
@@ -7,6 +6,40 @@
 #include <dt-bindings/soc/qcom,tcsr.h>
 
 / {
+	model = "Luma Home WRTQ-329ACN";
+	compatible = "luma,wrtq-329acn";
+
+	i2c-gpio {
+		compatible = "i2c-gpio";
+		sda-gpios = <&tlmm 1 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+		scl-gpios = <&tlmm 0 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		/* No driver exists */
+		led_ring@48 {
+			compatible = "ti,msp430";
+			reg = <0x48>;
+		};
+
+		eeprom@50 {
+			compatible = "atmel,24c16";
+			reg = <0x50>;
+			pagesize = <16>;
+			read-only;
+		};
+	};
+
+	keys {
+		compatible = "gpio-keys";
+
+		reset {
+			label = "reset";
+			gpios = <&tlmm 63 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
+		};
+	};
+
 	soc {
 		rng@22000 {
 			status = "okay";
@@ -15,17 +48,13 @@
 		mdio@90000 {
 			status = "okay";
 
-			pinctrl-0 = <&mdio_pins>;
-			pinctrl-names = "default";
+			/delete-node/ ethernet-phy@0;
+			/delete-node/ ethernet-phy@1;
+			/delete-node/ ethernet-phy@3;
 		};
 
 		ess-psgmii@98000 {
 			status = "okay";
-		};
-
-		counter@4a1000 {
-			compatible = "qcom,qca-gcnt";
-			reg = <0x4a1000 0x4>;
 		};
 
 		tcsr@1949000 {
@@ -35,8 +64,6 @@
 		};
 
 		tcsr@194b000 {
-			status = "okay";
-
 			compatible = "qcom,tcsr";
 			reg = <0x194b000 0x100>;
 			qcom,usb-hsphy-mode-select = <TCSR_USB_HSPHY_HOST_MODE>;
@@ -54,11 +81,11 @@
 			qcom,wifi_noc_memtype_m0_m2 = <TCSR_WIFI_NOC_MEMTYPE_M0_M2>;
 		};
 
-		usb2: usb2@60f8800 {
+		usb2@60f8800 {
 			status = "okay";
 		};
 
-		usb3: usb3@8af8800 {
+		usb3@8af8800 {
 			status = "okay";
 		};
 
@@ -73,7 +100,8 @@
 		ess-switch@c000000 {
 			status = "okay";
 
-			switch_lan_bmp = <0x10>; /* lan port bitmap */
+			switch_lan_bmp = <0x1e>;
+			switch_wan_bmp = <0x20>;
 		};
 
 		edma@c080000 {
@@ -82,64 +110,20 @@
 	};
 };
 
-&tlmm {
-	mdio_pins: mdio_pinmux {
-		pinmux_1 {
-			pins = "gpio53";
-			function = "mdio";
-		};
-
-		pinmux_2 {
-			pins = "gpio52";
-			function = "mdc";
-		};
-
-		pinconf {
-			pins = "gpio52", "gpio53";
-			bias-pull-up;
-		};
-	};
-
-	serial_pins: serial_pinmux {
-		mux {
-			pins = "gpio60", "gpio61";
-			function = "blsp_uart0";
-			bias-disable;
-		};
-	};
-
-	spi_0_pins: spi_0_pinmux {
-		pin {
-			function = "blsp_spi0";
-			pins = "gpio55", "gpio56", "gpio57";
-			drive-strength = <2>;
-			bias-disable;
-		};
-
-		pin_cs {
-			function = "gpio";
-			pins = "gpio54", "gpio59";
-			drive-strength = <2>;
-			bias-disable;
-			output-high;
-		};
-	};
-};
-
 &blsp_dma {
 	status = "okay";
 };
 
+
 &blsp1_spi1 {
 	status = "okay";
 
-	pinctrl-0 = <&spi_0_pins>;
+	cs-gpios = <&tlmm 54 GPIO_ACTIVE_HIGH>,
+		   <&tlmm 59 GPIO_ACTIVE_HIGH>;
+	pinctrl-0 = <&spi0_pins>;
 	pinctrl-names = "default";
-	cs-gpios = <&tlmm 54 GPIO_ACTIVE_HIGH>, <&tlmm 59 GPIO_ACTIVE_HIGH>;
 
 	flash@0 {
-		status = "okay";
-
 		compatible = "jedec,spi-nor";
 		reg = <0>;
 		spi-max-frequency = <24000000>;
@@ -150,56 +134,55 @@
 			#size-cells = <1>;
 
 			partition@0 {
-				label = "SBL1";
-				reg = <0x00000000 0x00040000>;
+				label = "0:SBL1";
+				reg = <0x000000 0x040000>;
 				read-only;
 			};
 
 			partition@40000 {
-				label = "MIBIB";
-				reg = <0x00040000 0x00020000>;
+				label = "0:MIBIB";
+				reg = <0x040000 0x020000>;
 				read-only;
 			};
 
 			partition@60000 {
-				label = "QSEE";
-				reg = <0x00060000 0x00060000>;
+				label = "0:QSEE";
+				reg = <0x060000 0x060000>;
 				read-only;
 			};
 
 			partition@c0000 {
-				label = "CDT";
-				reg = <0x000c0000 0x00010000>;
+				label = "0:CDT";
+				reg = <0x0c0000 0x010000>;
 				read-only;
 			};
 
 			partition@d0000 {
-				label = "DDRPARAMS";
-				reg = <0x000d0000 0x00010000>;
+				label = "0:DDRPARAMS";
+				reg = <0x0d0000 0x010000>;
 				read-only;
 			};
 
 			partition@e0000 {
-				label = "APPSBLENV"; /* uboot env*/
-				reg = <0x000e0000 0x00010000>;
-				read-only;
+				label = "0:APPSBLENV";
+				reg = <0x0e0000 0x010000>;
 			};
 
 			partition@f0000 {
-				label = "APPSBL"; /* uboot */
-				reg = <0x000f0000 0x00080000>;
+				label = "0:APPSBL";
+				reg = <0x0f0000 0x080000>;
 				read-only;
 			};
 
 			partition@170000 {
-				label = "ART";
-				reg = <0x00170000 0x00010000>;
+				label = "0:ART";
+				reg = <0x170000 0x010000>;
 				read-only;
 			};
 		};
 	};
 
-	spi-nand@1 {
+	flash@1 {
 		status = "okay";
 
 		compatible = "spi-nand";
@@ -213,7 +196,7 @@
 
 			partition@0 {
 				label = "ubi";
-				reg = <0x00000000 0x08000000>;
+				reg = <0x0000000 0x8000000>;
 			};
 		};
 	};
@@ -222,7 +205,7 @@
 &blsp1_uart1 {
 	status = "okay";
 
-	pinctrl-0 = <&serial_pins>;
+	pinctrl-0 = <&serial0_pins>;
 	pinctrl-names = "default";
 };
 
@@ -231,32 +214,43 @@
 };
 
 &gmac0 {
+	qcom,phy_mdio_addr = <2>;
 	qcom,poll_required = <1>;
-	qcom,poll_required_dynamic = <1>;
-	qcom,phy_mdio_addr = <3>;
-	vlan_tag = <1 0x10>;
 };
 
 &gmac1 {
-	qcom,poll_required = <1>;
-	qcom,poll_required_dynamic = <1>;
 	qcom,phy_mdio_addr = <4>;
-	vlan_tag = <2 0x20>;
+	qcom,poll_required = <1>;
 };
 
-&wifi0 {
-	status = "okay";
+&tlmm {
+	serial0_pins: serial0_pinmux {
+		mux {
+			function = "blsp_uart0";
+			pins = "gpio60", "gpio61";
+			bias-disable;
+		};
+	};
 
-	qcom,ath10k-calibration-variant = "8devices-Jalapeno";
+	spi0_pins: spi0_pinmux {
+		mux {
+			function = "blsp_spi0";
+			pins = "gpio55", "gpio56", "gpio57";
+			bias-disable;
+			drive-strength = <12>;
+		};
+
+		mux_cs {
+			function = "gpio";
+			pins = "gpio54", "gpio59";
+			bias-disable;
+			drive-strength = <2>;
+			output-high;
+		};
+	};
 };
 
-&wifi1 {
-	status = "okay";
-
-	qcom,ath10k-calibration-variant = "8devices-Jalapeno";
-};
-
-&usb3_ss_phy {
+&usb2_hs_phy {
 	status = "okay";
 };
 
@@ -264,6 +258,18 @@
 	status = "okay";
 };
 
-&usb2_hs_phy {
+&usb3_ss_phy {
 	status = "okay";
+};
+
+&wifi0 {
+	status = "okay";
+
+	qcom,ath10k-calibration-variant = "Luma-WRTQ-329ACN";
+};
+
+&wifi1 {
+	status = "okay";
+
+	qcom,ath10k-calibration-variant = "Luma-WRTQ-329ACN";
 };
